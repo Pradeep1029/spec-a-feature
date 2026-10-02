@@ -1543,7 +1543,7 @@ Details:
 
 **Main Success Scenario:**
 1. The instructor indicates to see which students have not submitted for a week.
-2. The system asks the instructor to select one of the course sections she is assigned to and a week of that course section; the week defaults to the current week, and only active weeks up to and including the current week are offered (BR-active-weeks).
+2. The system asks the instructor to select one of the course sections she is assigned to and a week of that course section. Only active weeks up to and including the current week are offered (BR-active-weeks), and the latest offered week is selected by default.
 3. The instructor selects the course section and the week.
 4. The system displays the submission status of every student in the course section for that week, grouped by team, with a separate status for the weekly activity report of the week and for the peer evaluation of the week (BR-submission-outstanding). See "Submission status" in the Associated Information of this use case.
 5. The instructor selects the outstanding items to nudge, either individually (a student and an item) or all outstanding items at once.
@@ -1557,8 +1557,8 @@ Details:
 - **2a. The instructor requests a course section she is not assigned to** (a course admin: one that does not belong to a course she owns):
   - 2a1. The system refuses and shows no submission status for that course section (BR-section-scoped-access).
   - 2a2. Use case ends.
-- **3a. The selected week is not one of the course section's active weeks:**
-  - 3a1. The system informs the instructor that nothing is expected for a week that is not an active week, so there is no one to nudge (BR-active-weeks, BR-submission-outstanding).
+- **3a. The requested week is not one of the course section's active weeks, or is later than the current week** (reached only by a request that bypasses step 2's choices):
+  - 3a1. The system shows no submission status and informs the instructor that nothing is expected for that week, so there is no one to nudge (BR-active-weeks, BR-submission-outstanding).
   - 3a2. The instructor selects another week (return to step 3) or ends the use case.
 - **4a. A student is not assigned to a team:**
   - 4a1. The system lists her under "Not on a team" with no item status and does not offer her for a nudge, because she cannot submit either item (BR-team-assignment-required). The system points the instructor to the course admin, who assigns students to teams (UC-TEA-assign-students).
@@ -1567,7 +1567,7 @@ Details:
   - 4b1. The system does not list her (BR-student-lifecycle, BR-submission-outstanding).
   - 4b2. Return to step 4.
 - **4c. The peer evaluation's submission window for the selected week has closed:**
-  - 4c1. The system shows each student without a peer evaluation of that week as "Missed", does not offer the item for a nudge, and informs the instructor that a missed peer evaluation cannot be made up (BR-evaluation-submission-window).
+  - 4c1. The system shows each student whose peer evaluation of that week is not submitted as "Missed", does not offer the item for a nudge, and informs the instructor that a missed peer evaluation cannot be made up (BR-evaluation-submission-window).
   - 4c2. Return to step 4.
 - **4d. The peer evaluation's submission window for the selected week has not opened yet** (the selected week is the current week):
   - 4d1. The system shows the peer evaluation as "Not yet open" for every student and does not offer it for a nudge (BR-evaluation-submission-window).
@@ -1584,8 +1584,8 @@ Details:
 - **7a. The instructor cancels:**
   - 7a1. The system sends no email and stores no nudge record.
   - 7a2. Use case ends.
-- **8a. A selected item is no longer outstanding when the system sends** (the student submitted, the window closed, the student was deactivated or removed from her team, or another instructor nudged her in the meantime):
-  - 8a1. The system leaves that item out of her nudge, sends no email to a student left with no items, and reports her as skipped with the reason in step 9.
+- **8a. A selected item is no longer outstanding when the system sends** (the student submitted, the window closed, the student was deactivated or removed from her team, or another instructor nudged her in the meantime), or the selected student is not a student of the selected course section:
+  - 8a1. The system leaves that item out of her nudge, sends no email to a student left with no items, and reports her as skipped with the reason in step 9. A student who is not in the selected course section is never emailed, and the report does not reveal anything about her beyond the identifier the request supplied (BR-section-scoped-access).
   - 8a2. Return to step 8.
 - **8b. The mail server rejects a student's address:**
   - 8b1. The system logs the failure, stores no nudge record for her (so the failure does not count toward BR-nudge-limit), continues with the remaining students, and reports her as failed in step 9.
@@ -1604,14 +1604,14 @@ Submission status (step 4), one per student per item, defined by BR-submission-o
 
 | Status | Weekly activity report of the week | Peer evaluation of the week | Can be nudged |
 | ---- | ---- | ---- | ---- |
-| Submitted | At least one activity recorded for the week | A peer evaluation of the week recorded | No |
-| Outstanding | No activity recorded for the week | None recorded, submission window open | Yes |
-| Missed | Not used | None recorded, submission window closed | No |
-| Not yet open | Not used | None recorded, submission window not yet open | No |
+| Submitted | At least one activity recorded for the week | A peer evaluation of the week recorded for every current member of her team, herself included | No |
+| Outstanding | No activity recorded for the week | Not submitted, submission window open | Yes |
+| Missed | Not used | Not submitted, submission window closed | No |
+| Not yet open | Not used | Not submitted, submission window not yet open | No |
 
 Nudge content (step 8):
 - A nudge is an email that an instructor sends from this use case to one student about her own outstanding items. It is separate from the scheduled weekly reminder (FR-NOT-weekly-reminder), which this use case does not change.
-- Each nudge is addressed to one student only. It names the course section, the week, each of her outstanding items, and the due day and time configured for that item in the course section. It does not name other students, her team's status, or any score or comment.
+- Each nudge is addressed to one student only. It names the course section, each of her outstanding items, and the week each item covers. For an outstanding peer evaluation it also names the last day of its submission window (BR-evaluation-submission-window). It names no deadline for a weekly activity report, because none is specified. It does not name other students, her team's status, or any score or comment.
 - Nudges are delivered through the Gmail SMTP integration (CI-email-notifications).
 
 Privacy: The submission status in step 4 is drawn from student educational records (CO-ferpa). Only the instructors assigned to the course section and the course admin who owns its course may see it (BR-section-scoped-access, BR-role-based-access). No student sees it, including students on the same team.
